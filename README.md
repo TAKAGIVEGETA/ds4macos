@@ -1,4 +1,4 @@
-Based on the original ds4macos project, the following macOS-specific enhancements have been added:
+Based on the original ds4macos project:
 
 ### New Features:
 
