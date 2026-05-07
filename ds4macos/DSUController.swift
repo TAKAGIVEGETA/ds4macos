@@ -72,6 +72,21 @@ class DSUController {
     var controllerService: ControllerService?
     var gameController: GCController?
     
+    // Gyro calibration state
+    var isCalibrating: Bool = false
+    var calibrationSamples: [(x: Double, y: Double, z: Double)] = []
+    let requiredSamples = 150
+    var gyroDriftOffset: (x: Double, y: Double, z: Double) = (0, 0, 0)
+    
+    func startCalibration() {
+        print("Starting gyro calibration for slot \(slot)...")
+        motionLock.lock()
+        isCalibrating = true
+        calibrationSamples.removeAll()
+        gyroDriftOffset = (0, 0, 0)
+        motionLock.unlock()
+    }
+    
     init(controllerService: ControllerService, gameController: GCController, slot: UInt8) {
         self.controllerService = controllerService
         self.gameController = gameController
@@ -188,9 +203,30 @@ class DSUController {
             accZ = getUInt8arrayFromDouble(num: -motion.acceleration.y)
             
             // gyroscope
-            gyroX = getUInt8arrayFromDouble(num: self.radiansToDegree(num: motion.rotationRate.x))
-            gyroY = getUInt8arrayFromDouble(num: -self.radiansToDegree(num: motion.rotationRate.z))
-            gyroZ = getUInt8arrayFromDouble(num: self.radiansToDegree(num: motion.rotationRate.y))
+            var rawX = motion.rotationRate.x
+            var rawY = motion.rotationRate.y
+            var rawZ = motion.rotationRate.z
+            
+            if self.isCalibrating {
+                self.calibrationSamples.append((rawX, rawY, rawZ))
+                if self.calibrationSamples.count >= self.requiredSamples {
+                    let avgX = self.calibrationSamples.map { $0.x }.reduce(0, +) / Double(self.calibrationSamples.count)
+                    let avgY = self.calibrationSamples.map { $0.y }.reduce(0, +) / Double(self.calibrationSamples.count)
+                    let avgZ = self.calibrationSamples.map { $0.z }.reduce(0, +) / Double(self.calibrationSamples.count)
+                    
+                    self.gyroDriftOffset = (avgX, avgY, avgZ)
+                    self.isCalibrating = false
+                    print("Calibration complete for slot \(self.slot). Offset: \(self.gyroDriftOffset)")
+                }
+            } else {
+                rawX -= self.gyroDriftOffset.x
+                rawY -= self.gyroDriftOffset.y
+                rawZ -= self.gyroDriftOffset.z
+            }
+            
+            gyroX = getUInt8arrayFromDouble(num: self.radiansToDegree(num: rawX))
+            gyroY = getUInt8arrayFromDouble(num: -self.radiansToDegree(num: rawZ))
+            gyroZ = getUInt8arrayFromDouble(num: self.radiansToDegree(num: rawY))
             self.motionLock.unlock()
         }
     }
@@ -233,9 +269,30 @@ class DSUController {
             accZ = getUInt8arrayFromDouble(num: motion.acceleration.y)
             
             // gyroscope
-            gyroX = getUInt8arrayFromDouble(num: self.radiansToDegree(num: motion.rotationRate.x))
-            gyroY = getUInt8arrayFromDouble(num: -self.radiansToDegree(num: motion.rotationRate.z))
-            gyroZ = getUInt8arrayFromDouble(num: self.radiansToDegree(num: motion.rotationRate.y))
+            var rawX = motion.rotationRate.x
+            var rawY = motion.rotationRate.y
+            var rawZ = motion.rotationRate.z
+            
+            if self.isCalibrating {
+                self.calibrationSamples.append((rawX, rawY, rawZ))
+                if self.calibrationSamples.count >= self.requiredSamples {
+                    let avgX = self.calibrationSamples.map { $0.x }.reduce(0, +) / Double(self.calibrationSamples.count)
+                    let avgY = self.calibrationSamples.map { $0.y }.reduce(0, +) / Double(self.calibrationSamples.count)
+                    let avgZ = self.calibrationSamples.map { $0.z }.reduce(0, +) / Double(self.calibrationSamples.count)
+                    
+                    self.gyroDriftOffset = (avgX, avgY, avgZ)
+                    self.isCalibrating = false
+                    print("Calibration complete for slot \(self.slot). Offset: \(self.gyroDriftOffset)")
+                }
+            } else {
+                rawX -= self.gyroDriftOffset.x
+                rawY -= self.gyroDriftOffset.y
+                rawZ -= self.gyroDriftOffset.z
+            }
+            
+            gyroX = getUInt8arrayFromDouble(num: self.radiansToDegree(num: rawX))
+            gyroY = getUInt8arrayFromDouble(num: -self.radiansToDegree(num: rawZ))
+            gyroZ = getUInt8arrayFromDouble(num: self.radiansToDegree(num: rawY))
             self.motionLock.unlock()
         }
     }
