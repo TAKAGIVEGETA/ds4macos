@@ -9,3 +9,5 @@ Based on the original ds4macos project, the following macOS-specific enhancement
 - **DSU 服务器稳定性优化 / DSU Server Stability Optimization**
   - **中文**: 修复了 DSU 协议在处理高频数据时的计算溢出 Bug，提升了体感数据回传的响应速度与稳定性。
   - **English**: Fixed calculation overflow bugs in the DSU protocol during high-frequency data processing, enhancing the responsiveness and stability of motion data.
+  
+<img width="1800" height="900" alt="image" src="https://github.com/user-attachments/assets/f6febc8b-6197-4ebc-888c-02aa683ee0aa" />
