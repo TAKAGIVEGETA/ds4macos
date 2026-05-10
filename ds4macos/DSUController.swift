@@ -100,6 +100,9 @@ class DSUController {
         self.controllerService = controllerService
         self.gameController = gameController
         
+        let vendor = self.gameController!.vendorName ?? "Unknown"
+        let product = self.gameController!.productCategory
+        let isAttached = self.gameController!.isAttachedToDevice
         
         if (self.gameController!.extendedGamepad != nil) {
             self.gameController!.extendedGamepad!.valueChangedHandler = inputValueChange
@@ -150,9 +153,11 @@ class DSUController {
         if !self.useHIDMotion && self.hidMotionReader != nil && self.motionCallbackCount == 50 {
             if !motion.hasAttitudeAndRotationRate &&
                motion.rotationRate.x == 0 && motion.rotationRate.y == 0 && motion.rotationRate.z == 0 {
+                print("⚠️ [Slot \(slot)] GCMotion returns zeros after 50 callbacks. Switching to HID fallback!")
                 self.useHIDMotion = true
             } else {
                 // GCMotion works fine, stop the HID reader
+                print("✅ [Slot \(slot)] GCMotion provides real data. HID fallback not needed.")
                 self.hidMotionReader?.stop()
                 self.hidMotionReader = nil
             }
@@ -161,12 +166,6 @@ class DSUController {
         self.updateControllerVariables()
         self.prevMotion = motion
         
-        // Reset counters every 5 seconds
-        let now = Date().timeIntervalSince1970
-        if now - self.lastDiagnosticTime > 5.0 {
-            self.motionCallbackCount = 0
-            self.lastDiagnosticTime = now
-        }
     }
     
     func updateControllerVariables() {

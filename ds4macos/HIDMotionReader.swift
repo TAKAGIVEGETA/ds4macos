@@ -41,6 +41,7 @@ class HIDMotionReader {
     }
     
     func start(vendorID: Int = 0x057E, productID: Int = 0x2009) {
+        print("🔌 HIDMotionReader: Starting HID reader thread...")
         thread = Thread {
             self.setupHID(vendorID: vendorID, productID: productID)
         }
@@ -52,6 +53,7 @@ class HIDMotionReader {
     private func setupHID(vendorID: Int, productID: Int) {
         hidManager = IOHIDManagerCreate(kCFAllocatorDefault, IOOptionBits(kIOHIDOptionsTypeNone))
         guard let manager = hidManager else {
+            print("❌ HIDMotionReader: Failed to create IOHIDManager")
             return
         }
         
@@ -67,11 +69,13 @@ class HIDMotionReader {
         
         let ret = IOHIDManagerOpen(manager, IOOptionBits(kIOHIDOptionsTypeNone))
         guard ret == kIOReturnSuccess else {
+            print("❌ HIDMotionReader: Failed to open HID manager: \(ret)")
             return
         }
         
         guard let deviceSet = IOHIDManagerCopyDevices(manager) as? Set<IOHIDDevice>,
               let device = deviceSet.first else {
+            print("❌ HIDMotionReader: No Pro Controller found via IOKit HID")
             return
         }
         
@@ -90,6 +94,8 @@ class HIDMotionReader {
             hidReportCallback,
             context
         )
+        
+        print("✅ HIDMotionReader: Listening for raw HID reports")
         
         // Keep the run loop alive to receive callbacks
         CFRunLoopRun()
