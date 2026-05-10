@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		09E8742555C4AD2C30120BC1 /* libPods-ds4macos.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5F14A78F8B78013CACB4C035 /* libPods-ds4macos.a */; };
+		3B9640122FB0786800B2DFAD /* HIDMotionReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B9640112FB0786800B2DFAD /* HIDMotionReader.swift */; };
 		8E03944725AF674F00F1DA1E /* Client.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E03944625AF674F00F1DA1E /* Client.swift */; };
 		8E06487025A3BF0B00577AF8 /* ds4macosApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E06486F25A3BF0B00577AF8 /* ds4macosApp.swift */; };
 		8E06487225A3BF0B00577AF8 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E06487125A3BF0B00577AF8 /* ContentView.swift */; };
@@ -45,6 +46,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		3B9640112FB0786800B2DFAD /* HIDMotionReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HIDMotionReader.swift; sourceTree = "<group>"; };
 		51047C84CF2AEEB1D59CCDB9 /* Pods-ds4macos.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ds4macos.debug.xcconfig"; path = "Target Support Files/Pods-ds4macos/Pods-ds4macos.debug.xcconfig"; sourceTree = "<group>"; };
 		5F14A78F8B78013CACB4C035 /* libPods-ds4macos.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-ds4macos.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		8E03944625AF674F00F1DA1E /* Client.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Client.swift; sourceTree = "<group>"; };
@@ -132,6 +134,7 @@
 				8E06487525A3BF0D00577AF8 /* Preview Content */,
 				8E0648A625A49D6300577AF8 /* DSUMessage.swift */,
 				8E7924AD25A4AE660098A822 /* DSUController.swift */,
+				3B9640112FB0786800B2DFAD /* HIDMotionReader.swift */,
 				8E0E519C25A6620700410DFF /* ControllerInfo.swift */,
 				8E0E51C325A7620B00410DFF /* DSUServer.swift */,
 				8E0E51C825A763D300410DFF /* ControllerService.swift */,
@@ -364,6 +367,7 @@
 				8E0E51C925A763D300410DFF /* ControllerService.swift in Sources */,
 				8E06487025A3BF0B00577AF8 /* ds4macosApp.swift in Sources */,
 				8E1E217E25A8EC220058D04B /* ControllerBox.swift in Sources */,
+				3B9640122FB0786800B2DFAD /* HIDMotionReader.swift in Sources */,
 				8E0E519D25A6620700410DFF /* ControllerInfo.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -527,7 +531,7 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"ds4macos/Preview Content\"";
 				DEVELOPMENT_TEAM = 6PP9YRSTW5;
-				"DEVELOPMENT_TEAM[sdk=macosx*]" = Z42QHN558U;
+				"DEVELOPMENT_TEAM[sdk=macosx*]" = BNUY33FMD9;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = NO;
 				ENABLE_PREVIEWS = YES;

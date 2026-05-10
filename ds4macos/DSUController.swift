@@ -75,8 +75,17 @@ class DSUController {
     // Gyro calibration state
     var isCalibrating: Bool = false
     var calibrationSamples: [(x: Double, y: Double, z: Double)] = []
-    let requiredSamples = 150
+    let requiredSamples = 300
     var gyroDriftOffset: (x: Double, y: Double, z: Double) = (0, 0, 0)
+    
+    // Diagnostic counters
+    var motionCallbackCount: Int = 0
+    var lastDiagnosticTime: TimeInterval = 0
+    
+    // HID fallback for Bluetooth mode
+    var hidMotionReader: HIDMotionReader?
+    var useHIDMotion: Bool = false
+    var hidDiagnosticPrinted: Bool = false
     
     func startCalibration() {
         print("Starting gyro calibration for slot \(slot)...")
@@ -91,32 +100,37 @@ class DSUController {
         self.controllerService = controllerService
         self.gameController = gameController
         
-        print("Connect controller!")
         
         if (self.gameController!.extendedGamepad != nil) {
-            print("Extended Gamepad: \(self.gameController!.extendedGamepad!.allButtons)")
             self.gameController!.extendedGamepad!.valueChangedHandler = inputValueChange
         } else if (self.gameController!.microGamepad != nil) {
-            print("Micro Gamepad: \(self.gameController!.microGamepad!.allButtons)")
             self.gameController!.microGamepad!.valueChangedHandler = microInputValueChange
         }
         
         if (self.gameController!.motion != nil) {
             self.gameController!.motion!.sensorsActive = true
             self.gameController!.motion!.valueChangedHandler = motionValueChange
-            print("Motion Sensor Enabled: \(self.gameController!.motion!.sensorsActive)")
+            
+            // Check if GameController actually provides motion data (BT may return zeros)
+            if !isAttached {
+                // Start HID reader as fallback, will be activated after first motion check
+                self.hidMotionReader = HIDMotionReader()
+                self.hidMotionReader?.start()
+                // We'll switch to HID after confirming GCMotion returns zeros (in motionValueChange)
+            }
         } else {
-            print("\(self.gameController!.physicalInputProfile.allElements)")
+            self.useHIDMotion = true
+            self.hidMotionReader = HIDMotionReader()
+            self.hidMotionReader?.start()
         }
         
         self.slot = slot
         self.macAddress[5] = self.slot
+        self.lastDiagnosticTime = Date().timeIntervalSince1970
         
         if (self.gameController!.extendedGamepad != nil) {
-            print("Update extended gamepad controller variables")
             self.updateControllerVariables()
         } else if (self.gameController!.microGamepad != nil) {
-            print("Update micro gamepad controller variables")
             self.updateMicroControllerVariables()
         }
     }
@@ -130,8 +144,29 @@ class DSUController {
     }
     
     func motionValueChange(motion: GCMotion) {
+        self.motionCallbackCount += 1
+        
+        // Auto-detect: if BT mode and GCMotion returns zeros, switch to HID fallback
+        if !self.useHIDMotion && self.hidMotionReader != nil && self.motionCallbackCount == 50 {
+            if !motion.hasAttitudeAndRotationRate &&
+               motion.rotationRate.x == 0 && motion.rotationRate.y == 0 && motion.rotationRate.z == 0 {
+                self.useHIDMotion = true
+            } else {
+                // GCMotion works fine, stop the HID reader
+                self.hidMotionReader?.stop()
+                self.hidMotionReader = nil
+            }
+        }
+        
         self.updateControllerVariables()
         self.prevMotion = motion
+        
+        // Reset counters every 5 seconds
+        let now = Date().timeIntervalSince1970
+        if now - self.lastDiagnosticTime > 5.0 {
+            self.motionCallbackCount = 0
+            self.lastDiagnosticTime = now
+        }
     }
     
     func updateControllerVariables() {
@@ -195,14 +230,45 @@ class DSUController {
         // MOTION
         timeStamp = UInt64(Date.init().timeIntervalSince1970 * 1000000)
         
-        if self.gameController!.motion != nil, let motion = self.gameController?.motion! {
-            self.motionLock.lock()
-            // acceleration
+        self.motionLock.lock()
+        
+        if self.useHIDMotion, let hidData = self.hidMotionReader?.getIMUData() {
+            // === HID Fallback Path (Bluetooth) ===
+            // Nintendo Switch Pro Controller raw HID axis mapping -> DSU Server axis mapping
+            accX = getUInt8arrayFromDouble(num: hidData.ay)
+            accY = getUInt8arrayFromDouble(num: -hidData.az)
+            accZ = getUInt8arrayFromDouble(num: hidData.ax)
+            
+            var rawX = hidData.gx
+            var rawY = hidData.gy
+            var rawZ = hidData.gz
+            
+            if self.isCalibrating {
+                self.calibrationSamples.append((rawX, rawY, rawZ))
+                if self.calibrationSamples.count >= self.requiredSamples {
+                    let avgX = self.calibrationSamples.map { $0.x }.reduce(0, +) / Double(self.calibrationSamples.count)
+                    let avgY = self.calibrationSamples.map { $0.y }.reduce(0, +) / Double(self.calibrationSamples.count)
+                    let avgZ = self.calibrationSamples.map { $0.z }.reduce(0, +) / Double(self.calibrationSamples.count)
+                    self.gyroDriftOffset = (avgX, avgY, avgZ)
+                    self.isCalibrating = false
+                    print("Calibration complete (HID) for slot \(self.slot). Offset: \(self.gyroDriftOffset)")
+                }
+            } else {
+                rawX -= self.gyroDriftOffset.x
+                rawY -= self.gyroDriftOffset.y
+                rawZ -= self.gyroDriftOffset.z
+            }
+            
+            gyroX = getUInt8arrayFromDouble(num: -self.radiansToDegree(num: rawY))
+            gyroY = getUInt8arrayFromDouble(num: -self.radiansToDegree(num: rawZ))
+            gyroZ = getUInt8arrayFromDouble(num: self.radiansToDegree(num: rawX))
+            
+        } else if self.gameController!.motion != nil, let motion = self.gameController?.motion! {
+            // === Normal GameController Path (USB) ===
             accX = getUInt8arrayFromDouble(num: motion.acceleration.x)
             accY = getUInt8arrayFromDouble(num: motion.acceleration.z)
             accZ = getUInt8arrayFromDouble(num: -motion.acceleration.y)
             
-            // gyroscope
             var rawX = motion.rotationRate.x
             var rawY = motion.rotationRate.y
             var rawZ = motion.rotationRate.z
@@ -213,7 +279,6 @@ class DSUController {
                     let avgX = self.calibrationSamples.map { $0.x }.reduce(0, +) / Double(self.calibrationSamples.count)
                     let avgY = self.calibrationSamples.map { $0.y }.reduce(0, +) / Double(self.calibrationSamples.count)
                     let avgZ = self.calibrationSamples.map { $0.z }.reduce(0, +) / Double(self.calibrationSamples.count)
-                    
                     self.gyroDriftOffset = (avgX, avgY, avgZ)
                     self.isCalibrating = false
                     print("Calibration complete for slot \(self.slot). Offset: \(self.gyroDriftOffset)")
@@ -227,8 +292,9 @@ class DSUController {
             gyroX = getUInt8arrayFromDouble(num: self.radiansToDegree(num: rawX))
             gyroY = getUInt8arrayFromDouble(num: -self.radiansToDegree(num: rawZ))
             gyroZ = getUInt8arrayFromDouble(num: self.radiansToDegree(num: rawY))
-            self.motionLock.unlock()
         }
+        
+        self.motionLock.unlock()
     }
     
     func updateMicroControllerVariables() {

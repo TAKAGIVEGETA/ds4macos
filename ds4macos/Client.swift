@@ -14,21 +14,21 @@ class Client {
     var server: DSUServer
     var address: SwiftAsyncUDPSocketAddress
     var socket: SwiftAsyncUDPSocket
-    var timeStampLastDataRequest: UInt64
+    var timeStampLastDataRequest: TimeInterval
     var port: UInt16
     
-    let timeOut: UInt64 = 10 * 1000000
+    let timeOut: TimeInterval = 10.0 // 10 seconds
 
     init(server: DSUServer, socket: SwiftAsyncUDPSocket, address: SwiftAsyncUDPSocketAddress, port: UInt16) {
         self.server = server
         self.socket = socket
-        self.timeStampLastDataRequest = UInt64(Date.init().timeIntervalSince1970 * 1000000)
+        self.timeStampLastDataRequest = Date().timeIntervalSince1970
         self.address = address
         self.port = port
     }
     
     func setTimeStampOnDataRequest() {
-        self.timeStampLastDataRequest = UInt64(Date.init().timeIntervalSince1970 * 1000000)
+        self.timeStampLastDataRequest = Date().timeIntervalSince1970
     }
 
     func setSlot(slot: Int) {
@@ -44,7 +44,7 @@ class Client {
     }
     
     func send(dataMessage: Data) {
-        if (UInt64(Date.init().timeIntervalSince1970 * 1000000) - self.timeStampLastDataRequest) > self.timeOut {
+        if (Date().timeIntervalSince1970 - self.timeStampLastDataRequest) > self.timeOut {
             print("client timed out, removing from client list")
             self.close()
             return
